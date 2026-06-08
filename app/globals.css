@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-cairo);
+}
+
+html,
+body {
+  background: #060606;
+}
+
+/* subtle gold ambience behind everything */
+body {
+  background-image:
+    radial-gradient(circle at 50% -10%, rgba(212, 175, 55, 0.12), transparent 55%),
+    radial-gradient(circle at 100% 0%, rgba(212, 175, 55, 0.06), transparent 40%);
+  background-attachment: fixed;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #d4af37, #8a6d1d);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes pop {
+  0% { transform: scale(0.96); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-pop {
+  animation: pop 0.25s ease-out;
+}
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-floaty {
+  animation: floaty 4s ease-in-out infinite;
+}
+
+/* gold gradient text */
+.gold-text {
+  background: linear-gradient(180deg, #fde68a 0%, #d4af37 45%, #b8860b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* gold drop shadow for the logo */
+.gold-glow {
+  filter: drop-shadow(0 0 18px rgba(212, 175, 55, 0.45));
+}
+
+/* reusable gold gradient button */
+.btn-gold {
+  background: linear-gradient(180deg, #fcd34d 0%, #d4af37 55%, #a87d22 100%);
+  color: #1a1407;
+  box-shadow: 0 4px 18px rgba(212, 175, 55, 0.3);
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+.btn-gold:hover {
+  filter: brightness(1.08);
+}
+.btn-gold:active {
+  transform: translateY(1px);
+}
+.btn-gold:disabled {
+  filter: grayscale(0.6) brightness(0.7);
+  cursor: not-allowed;
+}

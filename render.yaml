@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: culture-quiz
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      # Node 22+ ضروري (نستعمل WebSocket العام في الاتصال بـ Kick)
+      - key: NODE_VERSION
+        value: "22"
+      # اضبط القيم التالية في لوحة Render (Environment) — لا تكتبها هنا
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
