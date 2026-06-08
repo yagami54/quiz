@@ -42,6 +42,25 @@ function fetchChannel(slug: string): Promise<unknown> {
   });
 }
 
+/**
+ * معرّف غرفة دردشة ثابت من البيئة (احتياطي عند حجب Cloudflare للـ datacenter).
+ * صيغ مدعومة:
+ *   KICK_CHATROOM_ID=15933557                       (يُطبَّق على أي قناة)
+ *   KICK_CHATROOM_ID=yuri4games:15933557,other:123  (خريطة slug:id)
+ */
+function chatroomIdFromEnv(slug: string): number | null {
+  const raw = (process.env.KICK_CHATROOM_ID || "").trim();
+  if (!raw) return null;
+  if (/^\d+$/.test(raw)) return Number(raw);
+  for (const part of raw.split(",")) {
+    const [s, id] = part.split(":").map((x) => x.trim());
+    if (s && id && s.toLowerCase() === slug.toLowerCase() && /^\d+$/.test(id)) {
+      return Number(id);
+    }
+  }
+  return null;
+}
+
 export class KickChat {
   slug = "";
   chatroomId: number | null = null;
@@ -66,19 +85,27 @@ export class KickChat {
     this.error = "";
     this.onStatus();
 
+    // 1) جلب معرّف الغرفة عبر API (يعمل من IP منزلي)
+    let id: number | null = null;
     try {
-      const data = (await fetchChannel(this.slug)) as {
-        chatroom?: { id?: number };
-      };
-      this.chatroomId = data?.chatroom?.id ?? null;
-      if (!this.chatroomId) throw new Error("تعذّر الحصول على معرّف غرفة الدردشة");
-    } catch (e) {
+      const data = (await fetchChannel(this.slug)) as { chatroom?: { id?: number } };
+      id = data?.chatroom?.id ?? null;
+    } catch {
+      /* قد يحجب Cloudflare طلبات الـ datacenter — نجرّب fallback تحت */
+    }
+
+    // 2) fallback: معرّف ثابت من متغيّر البيئة (للنشر على خوادم datacenter مثل Render)
+    //    صيغة: KICK_CHATROOM_ID=<id> أو KICK_CHATROOM_ID=<slug>:<id>,<slug>:<id>
+    if (!id) id = chatroomIdFromEnv(this.slug);
+
+    if (!id) {
       this.status = "error";
-      this.error = e instanceof Error ? e.message : "خطأ في الاتصال بـ Kick";
+      this.error = "تعذّر الحصول على معرّف غرفة الدردشة";
       this.onStatus();
       return;
     }
 
+    this.chatroomId = id;
     this.openSocket();
   }
 
