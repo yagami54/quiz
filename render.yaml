@@ -11,6 +11,10 @@ services:
       # Node 22+ ضروري (نستعمل WebSocket العام في الاتصال بـ Kick)
       - key: NODE_VERSION
         value: "22"
+      # معرّف غرفة دردشة Kick الثابت (تجاوز حجب Cloudflare للـ datacenter)
+      # ليس سرًّا — معرّف عام لقناة yuri4games
+      - key: KICK_CHATROOM_ID
+        value: "15933557"
       # اضبط القيم التالية في لوحة Render (Environment) — لا تكتبها هنا
       - key: ADMIN_PASSWORD
         sync: false
