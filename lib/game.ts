@@ -259,6 +259,18 @@ function registerAnswer(username: string, choice: number) {
 }
 
 // ---------- round flow ----------
+// Shuffle the 4 options so the correct answer isn't always in the same slot.
+// Works on indices (safe even if two options share the same text).
+function shuffleOptions(q: Question): Question {
+  const idx = [0, 1, 2, 3];
+  for (let i = idx.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  const options = idx.map((i) => q.options[i]) as [string, string, string, string];
+  return { ...q, options, correct: idx.indexOf(q.correct) };
+}
+
 function pickRoundQuestions(): Question[] {
   const pool = QUESTIONS.filter(
     (q) => state.topic === "mixed" || q.category === state.topic
@@ -267,7 +279,10 @@ function pickRoundQuestions(): Question[] {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-  return pool.slice(0, Math.min(state.settings.perRound, pool.length));
+  // shuffle options of each chosen question so the correct slot is random
+  return pool
+    .slice(0, Math.min(state.settings.perRound, pool.length))
+    .map(shuffleOptions);
 }
 
 function startQuestion() {
