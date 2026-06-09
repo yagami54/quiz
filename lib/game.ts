@@ -80,7 +80,7 @@ function createState(): GameState {
     kick: null,
     mode: "trivia",
     topic: null,
-    settings: { scoringMode: "first", questionSeconds: 20, perRound: 20, joinKeyword: "YR1" },
+    settings: { scoringMode: "first", questionSeconds: 20, perRound: 20, joinKeyword: "YR1", autoAdvance: true },
     roomOpen: false,
     prediction: {
       active: false,
@@ -145,7 +145,12 @@ function tick() {
   if (state.phase === "question" && now >= state.phaseEndsAt) {
     endQuestion();
     notify();
-  } else if (state.phase === "reveal" && now >= state.phaseEndsAt) {
+  } else if (
+    state.phase === "reveal" &&
+    now >= state.phaseEndsAt &&
+    state.settings.autoAdvance
+  ) {
+    // في الوضع اليدوي: نبقى في الكشف وننتظر "السؤال التالي" من الأدمين
     advance();
     notify();
   }
@@ -358,6 +363,8 @@ export function updateSettings(patch: Partial<Settings>) {
     const kw = patch.joinKeyword.trim().slice(0, 20);
     if (kw) state.settings.joinKeyword = kw;
   }
+  if (typeof patch.autoAdvance === "boolean")
+    state.settings.autoAdvance = patch.autoAdvance;
   notify();
 }
 

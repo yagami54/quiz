@@ -65,6 +65,8 @@ export interface Settings {
   questionSeconds: number;
   perRound: number;
   joinKeyword: string;
+  /** true = ينتقل تلقائيًا بعد كشف الجواب · false = يتوقّف وينتظر "السؤال التالي" يدويًا */
+  autoAdvance: boolean;
 }
 
 export interface PublicState {

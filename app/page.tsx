@@ -393,9 +393,15 @@ function GameDashboard({ state, sse }: { state: PublicState; sse: boolean }) {
                   );
                 })}
               </div>
-              <p className="text-center text-slate-500 text-sm">
-                ✍ يكتب المتابعون رقم الإجابة (1-4) في الدردشة
-              </p>
+              {state.phase === "reveal" && !state.settings.autoAdvance ? (
+                <p className="text-center text-amber-300 text-sm font-bold animate-pulse">
+                  ⏸ متوقّف — اضغط «⏭ السؤال التالي» للمتابعة
+                </p>
+              ) : (
+                <p className="text-center text-slate-500 text-sm">
+                  ✍ يكتب المتابعون رقم الإجابة (1-4) في الدردشة
+                </p>
+              )}
             </div>
           )}
 
@@ -545,6 +551,25 @@ function SettingsTab({ state }: { state: PublicState }) {
           onChange={(e) => send("settings", { settings: { perRound: Number(e.target.value) } })}
           className="w-full accent-amber-500"
         />
+      </div>
+      <div>
+        <label className="block mb-2 text-slate-400">الانتقال بين الأسئلة</label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => send("settings", { settings: { autoAdvance: true } })}
+            className={`rounded-lg p-3 border ${s.autoAdvance ? "bg-amber-500/15 border-amber-500 text-amber-300" : "bg-slate-800 border-slate-700"}`}
+          >
+            ⏩ تلقائي
+            <span className="block text-[11px] text-slate-500 mt-0.5">ينتقل وحدو بعد الجواب</span>
+          </button>
+          <button
+            onClick={() => send("settings", { settings: { autoAdvance: false } })}
+            className={`rounded-lg p-3 border ${!s.autoAdvance ? "bg-amber-500/15 border-amber-500 text-amber-300" : "bg-slate-800 border-slate-700"}`}
+          >
+            ✋ يدوي
+            <span className="block text-[11px] text-slate-500 mt-0.5">تتحكّم أنت في التالي</span>
+          </button>
+        </div>
       </div>
       <button
         onClick={() => send("reset")}
