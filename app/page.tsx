@@ -120,8 +120,8 @@ function AdminApp() {
   if (state.status !== "connected") {
     return <ConnectScreen state={state} sse={connected} />;
   }
-  // 2) connected but no activity chosen (topic for trivia, or prediction segment)
-  if (!state.topic && state.mode !== "prediction") {
+  // 2) connected but no activity chosen — show topic select only in trivia mode
+  if (!state.topic && state.mode === "trivia") {
     return <TopicScreen state={state} />;
   }
   // 3) full game dashboard
