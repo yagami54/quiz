@@ -389,30 +389,21 @@ function numericDistractors(correct: string, existing: string[], count: number):
 }
 
 /**
- * يبني سؤالًا بـ6 خيارات بحيث الخيارات الإضافية **من نفس نوع الجواب**:
- * سؤال رقمي → أرقام مولّدة قريبة بنفس الوحدة · سؤال نصّي → نصوص من نفس الفئة.
- * إن لم تتوفّر خيارات مناسبة، يبقى عدد أقل بدل خيارات غريبة.
+ * يخلط خيارات السؤال (لتوزيع موضع الجواب الصحيح). للأسئلة **الرقمية فقط** يزيد
+ * خيارات رقمية مولّدة قريبة من الجواب بنفس الوحدة (حتى 6). الأسئلة **النصّية**
+ * تبقى بخياراتها الأصلية المكتوبة يدويًا (منطقية 100% — بلا استعارة عشوائية).
  */
-function buildQuestion(q: Question, textPool: string[]): Question {
+function buildQuestion(q: Question): Question {
   const seen = new Set(q.options.map(norm));
   const items = q.options.map((text, i) => ({ text, correct: i === q.correct }));
-  const need = OPTIONS_PER_QUESTION - items.length;
   const numericQ = q.options.filter(isNumericOpt).length >= q.options.length - 1;
 
   if (numericQ) {
+    const need = OPTIONS_PER_QUESTION - items.length;
     for (const g of numericDistractors(q.options[q.correct], q.options, need)) {
       if (seen.has(norm(g))) continue;
       seen.add(norm(g));
       items.push({ text: g, correct: false });
-    }
-  } else {
-    for (const cand of shuffleInPlace([...textPool])) {
-      if (items.length >= OPTIONS_PER_QUESTION) break;
-      if (isNumericOpt(cand)) continue; // لا أرقام في سؤال نصّي
-      const k = norm(cand);
-      if (seen.has(k)) continue;
-      seen.add(k);
-      items.push({ text: cand, correct: false });
     }
   }
 
@@ -428,17 +419,10 @@ function pickRoundQuestions(): Question[] {
   const pool = QUESTIONS.filter(
     (q) => state.topic === "mixed" || q.category === state.topic
   );
-  // مجمع نصوص خاطئة لكل فئة (للأسئلة النصّية فقط؛ الأرقام تُولَّد)
-  const textByCat: Record<string, string[]> = {};
-  for (const q of QUESTIONS) {
-    for (const o of q.options) {
-      if (!isNumericOpt(o)) (textByCat[q.category] ||= []).push(o);
-    }
-  }
   shuffleInPlace(pool);
   return pool
     .slice(0, Math.min(state.settings.perRound, pool.length))
-    .map((q) => buildQuestion(q, textByCat[q.category] || []));
+    .map(buildQuestion);
 }
 
 function startQuestion() {
