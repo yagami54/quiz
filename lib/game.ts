@@ -356,22 +356,64 @@ function shuffleInPlace<T>(a: T[]): T[] {
 }
 
 const norm = (s: string) => s.trim().toLowerCase();
+const toLatinNum = (s: string) => s.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660));
+
+// هل الخيار رقمي بطبعه؟ (رقم قصير، ربما بوحدة بسيطة مثل "16" أو "45 دقيقة")
+const isNumericOpt = (s: string) => /[\d٠-٩]/.test(s) && s.trim().length <= 14;
 
 /**
- * يبني سؤالًا بـ6 خيارات: الـ4 الأصلية + خيارين خاطئين مستعارين من نفس الفئة،
- * ثم يخلط الكل عشوائيًا (فالإجابة الصحيحة تتوزّع على المواضع الستة).
- * يتعقّب الصحيحة عبر علم (آمن حتى لو تكرّر نص خيار).
+ * يولّد خيارات رقمية خاطئة قريبة من الجواب الصحيح وبنفس الوحدة
+ * (مثلاً "5 سنوات" → "6 سنوات"، "8" → "9","7") حتى تبقى منطقية.
  */
-function buildQuestion(q: Question, distractorPool: string[]): Question {
+function numericDistractors(correct: string, existing: string[], count: number): string[] {
+  const m = toLatinNum(correct.trim()).match(/^(\d+)(.*)$/);
+  if (!m) return [];
+  const num = parseInt(m[1], 10);
+  const unit = m[2]; // الوحدة مثل " سنوات" أو ""
+  if (isNaN(num)) return [];
+  const usedNums = new Set(
+    existing.map((o) => {
+      const mm = toLatinNum(o).match(/\d+/);
+      return mm ? parseInt(mm[0], 10) : NaN;
+    })
+  );
+  const offsets = [num + 1, num - 1, num + 2, num - 2, num + 3, num + 5, num * 2, Math.floor(num / 2), num + 10];
+  const out: string[] = [];
+  for (const v of offsets) {
+    if (out.length >= count) break;
+    if (v < 0 || v === num || usedNums.has(v)) continue;
+    usedNums.add(v);
+    out.push(unit ? `${v}${unit}` : String(v));
+  }
+  return out;
+}
+
+/**
+ * يبني سؤالًا بـ6 خيارات بحيث الخيارات الإضافية **من نفس نوع الجواب**:
+ * سؤال رقمي → أرقام مولّدة قريبة بنفس الوحدة · سؤال نصّي → نصوص من نفس الفئة.
+ * إن لم تتوفّر خيارات مناسبة، يبقى عدد أقل بدل خيارات غريبة.
+ */
+function buildQuestion(q: Question, textPool: string[]): Question {
   const seen = new Set(q.options.map(norm));
   const items = q.options.map((text, i) => ({ text, correct: i === q.correct }));
+  const need = OPTIONS_PER_QUESTION - items.length;
+  const numericQ = q.options.filter(isNumericOpt).length >= q.options.length - 1;
 
-  for (const cand of shuffleInPlace([...distractorPool])) {
-    if (items.length >= OPTIONS_PER_QUESTION) break;
-    const k = norm(cand);
-    if (seen.has(k)) continue;
-    seen.add(k);
-    items.push({ text: cand, correct: false });
+  if (numericQ) {
+    for (const g of numericDistractors(q.options[q.correct], q.options, need)) {
+      if (seen.has(norm(g))) continue;
+      seen.add(norm(g));
+      items.push({ text: g, correct: false });
+    }
+  } else {
+    for (const cand of shuffleInPlace([...textPool])) {
+      if (items.length >= OPTIONS_PER_QUESTION) break;
+      if (isNumericOpt(cand)) continue; // لا أرقام في سؤال نصّي
+      const k = norm(cand);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      items.push({ text: cand, correct: false });
+    }
   }
 
   shuffleInPlace(items);
@@ -386,15 +428,17 @@ function pickRoundQuestions(): Question[] {
   const pool = QUESTIONS.filter(
     (q) => state.topic === "mixed" || q.category === state.topic
   );
-  // مجمع خيارات خاطئة لكل فئة (من كل البنك) — خيارات إضافية ذات صلة بالموضوع
-  const byCategory: Record<string, string[]> = {};
+  // مجمع نصوص خاطئة لكل فئة (للأسئلة النصّية فقط؛ الأرقام تُولَّد)
+  const textByCat: Record<string, string[]> = {};
   for (const q of QUESTIONS) {
-    (byCategory[q.category] ||= []).push(...q.options);
+    for (const o of q.options) {
+      if (!isNumericOpt(o)) (textByCat[q.category] ||= []).push(o);
+    }
   }
   shuffleInPlace(pool);
   return pool
     .slice(0, Math.min(state.settings.perRound, pool.length))
-    .map((q) => buildQuestion(q, byCategory[q.category] || []));
+    .map((q) => buildQuestion(q, textByCat[q.category] || []));
 }
 
 function startQuestion() {
