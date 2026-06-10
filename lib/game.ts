@@ -578,11 +578,16 @@ export function openNationalTeam() {
   const teams = NATIONAL_TEAMS.filter((t) => t.clubs.length >= 4);
   if (teams.length === 0) return;
   const team = teams[Math.floor(Math.random() * teams.length)];
-  // اخلط الشعارات حتى لا يدلّ ترتيبها على شيء
-  const crests = team.clubs.map((c) => c.badge);
-  for (let i = crests.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [crests[i], crests[j]] = [crests[j], crests[i]];
+  // رتّب الشعارات حسب المركز (مهاجمون فوق ← حارس تحت)، مع خلط داخل كل خطّ
+  const order = ["FWD", "MID", "DEF", "GK"] as const;
+  const crests: string[] = [];
+  for (const pos of order) {
+    const line = team.clubs.filter((c) => c.pos === pos).map((c) => c.badge);
+    for (let i = line.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [line[i], line[j]] = [line[j], line[i]];
+    }
+    crests.push(...line);
   }
   state.imageGuess = {
     active: true,

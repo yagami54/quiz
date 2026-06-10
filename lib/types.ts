@@ -62,11 +62,13 @@ export interface PublicPrediction {
 }
 
 // ---- Image guess (تخمين الصورة) ----
+export type FieldPos = "GK" | "DEF" | "MID" | "FWD";
+
 export interface PublicImageGuess {
   active: boolean;
   open: boolean; // accepting guesses from chat
   imageUrl: string;
-  crests: string[]; // club badge URLs (national-team mode); empty = single image
+  crests: string[]; // club badge URLs ordered by position (FWD..GK) for the formation
   prompt: string;
   resolved: boolean;
   answer: string; // shown only after reveal
