@@ -39,8 +39,8 @@ export interface Question {
 export type Phase = "lobby" | "question" | "reveal" | "finished";
 export type ScoringMode = "first" | "all";
 export type KickStatus = "idle" | "connecting" | "connected" | "error";
-// top-level activity: classic trivia, or the standalone PUBG prediction segment
-export type GameMode = "trivia" | "prediction";
+// top-level activity: trivia, PUBG prediction, or image-guess segment
+export type GameMode = "trivia" | "prediction" | "imageguess";
 
 // ---- PUBG match prediction ----
 export type PredKind = "kills" | "placement" | "win";
@@ -59,6 +59,19 @@ export interface PublicPrediction {
   actual: number | null;
   count: number;
   entries: { username: string; value: number; points: number | null }[];
+}
+
+// ---- Image guess (تخمين الصورة) ----
+export interface PublicImageGuess {
+  active: boolean;
+  open: boolean; // accepting guesses from chat
+  imageUrl: string;
+  prompt: string;
+  resolved: boolean;
+  answer: string; // shown only after reveal
+  winner: string | null;
+  guessCount: number;
+  recentGuesses: { username: string; text: string; correct: boolean }[];
 }
 
 export interface Settings {
@@ -99,6 +112,8 @@ export interface PublicState {
   reveal: { correct: number; winners: string[] } | null;
   // pubg match prediction
   prediction: PublicPrediction;
+  // image guess
+  imageGuess: PublicImageGuess;
   // players
   players: {
     username: string;

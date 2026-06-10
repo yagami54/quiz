@@ -1,5 +1,6 @@
 import {
   backToTopics,
+  cancelImageGuess,
   cancelPrediction,
   clearPlayers,
   closePrediction,
@@ -9,10 +10,12 @@ import {
   injectChat,
   kickPlayer,
   nextQuestion,
+  openImageGuess,
   openPrediction,
   openRoom,
   resetScores,
   resolvePrediction,
+  revealImageGuess,
   setMode,
   setTopic,
   startRound,
@@ -65,6 +68,23 @@ export async function POST(request: Request) {
       break;
     case "cancelPrediction":
       cancelPrediction();
+      break;
+    case "openImageGuess":
+      openImageGuess(
+        String(body.imageUrl || ""),
+        String(body.prompt || ""),
+        Array.isArray(body.answers)
+          ? body.answers.map(String)
+          : String(body.answers || "")
+              .split(",")
+              .map((s) => s.trim()),
+      );
+      break;
+    case "revealImageGuess":
+      revealImageGuess();
+      break;
+    case "cancelImageGuess":
+      cancelImageGuess();
       break;
     case "start":
       startRound();

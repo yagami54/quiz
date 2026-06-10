@@ -77,7 +77,9 @@ export default function Overlay() {
         )}
 
         {state.phase === "lobby" &&
-          (state.prediction.active ? (
+          (state.imageGuess.active ? (
+            <ImageGuessWidget state={state} />
+          ) : state.prediction.active ? (
             <PredictionWidget state={state} />
           ) : (
             <JoinWidget state={state} />
@@ -231,6 +233,32 @@ function PredictionWidget({ state }: { state: PublicState }) {
         </>
       ) : (
         <p className="text-2xl font-bold text-amber-200">التوقّعات مغلقة — في انتظار النتيجة</p>
+      )}
+    </Card>
+  );
+}
+
+function ImageGuessWidget({ state }: { state: PublicState }) {
+  const ig = state.imageGuess;
+  return (
+    <Card className="w-full max-w-3xl p-6 text-center space-y-4">
+      <div className="flex items-center justify-between">
+        <Brand />
+        <span className="rounded-full bg-sky-500/25 text-sky-300 px-4 py-1.5 font-bold">
+          🖼️ خمّن الصورة
+        </span>
+      </div>
+      {ig.prompt && <p className="text-2xl font-bold text-white">{ig.prompt}</p>}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={ig.imageUrl} alt="" className="max-h-[55vh] mx-auto rounded-2xl object-contain" />
+      {ig.open ? (
+        <p className="text-xl font-bold text-sky-300">✍ اكتب تخمينك في الدردشة</p>
+      ) : ig.winner ? (
+        <p className="text-2xl font-extrabold text-emerald-400">
+          🎉 {ig.winner} — الجواب: {ig.answer}
+        </p>
+      ) : (
+        <p className="text-2xl font-extrabold gold-text">الجواب: {ig.answer}</p>
       )}
     </Card>
   );

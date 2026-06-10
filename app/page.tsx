@@ -236,20 +236,26 @@ function TopicScreen({ state }: { state: PublicState }) {
           ))}
         </div>
 
-        {/* standalone PUBG match-prediction segment */}
-        <div className="mt-4">
+        {/* standalone segments */}
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <button
             onClick={() => send("mode", { mode: "prediction" })}
-            className="w-full rounded-2xl bg-gradient-to-br from-orange-500/15 to-amber-500/15 border border-orange-500/40 hover:border-orange-400 hover:from-orange-500/25 hover:to-amber-500/25 p-6 text-center transition group flex items-center justify-center gap-4"
+            className="rounded-2xl bg-gradient-to-br from-orange-500/15 to-amber-500/15 border border-orange-500/40 hover:border-orange-400 hover:from-orange-500/25 hover:to-amber-500/25 p-5 text-center transition group flex items-center justify-center gap-3"
           >
             <div className="text-4xl group-hover:scale-110 transition">🎯</div>
             <div className="text-right">
-              <div className="font-extrabold text-orange-300 text-lg">
-                توقّعات الماتش (PUBG)
-              </div>
-              <div className="text-xs text-slate-400">
-                فقرة مستقلة — توقّع القتلات والمرتبة وChicken Dinner
-              </div>
+              <div className="font-extrabold text-orange-300">توقّعات الماتش (PUBG)</div>
+              <div className="text-[11px] text-slate-400">قتلات · مرتبة · Chicken Dinner</div>
+            </div>
+          </button>
+          <button
+            onClick={() => send("mode", { mode: "imageguess" })}
+            className="rounded-2xl bg-gradient-to-br from-sky-500/15 to-cyan-500/15 border border-sky-500/40 hover:border-sky-400 hover:from-sky-500/25 hover:to-cyan-500/25 p-5 text-center transition group flex items-center justify-center gap-3"
+          >
+            <div className="text-4xl group-hover:scale-110 transition">🖼️</div>
+            <div className="text-right">
+              <div className="font-extrabold text-sky-300">تخمين الصورة</div>
+              <div className="text-[11px] text-slate-400">صورة + تخمين حرّ في الدردشة</div>
             </div>
           </button>
         </div>
@@ -301,9 +307,9 @@ function GameDashboard({ state, sse }: { state: PublicState; sse: boolean }) {
           <div className="flex items-center gap-2.5 text-right">
             <img src="/logo.png" alt="YR" className="w-9 h-9 object-contain gold-glow shrink-0" />
             <div>
-              <h1 className={`text-lg font-bold ${state.mode === "prediction" ? "text-orange-300" : "gold-text"}`}>{state.topicLabel}</h1>
+              <h1 className={`text-lg font-bold ${state.mode === "prediction" ? "text-orange-300" : state.mode === "imageguess" ? "text-sky-300" : "gold-text"}`}>{state.topicLabel}</h1>
               <p className="text-xs text-slate-500">
-                {state.mode === "prediction" ? "توقّعات حية على ماتشات PUBG" : "أسئلة ثقافية متنوعة"}
+                {state.mode === "prediction" ? "توقّعات حية على ماتشات PUBG" : state.mode === "imageguess" ? "خمّن الصورة من الدردشة" : "أسئلة ثقافية متنوعة"}
               </p>
             </div>
           </div>
@@ -343,7 +349,9 @@ function GameDashboard({ state, sse }: { state: PublicState; sse: boolean }) {
 
         <div className="flex-1 grid place-items-center p-6 relative overflow-auto">
           {state.phase === "lobby" &&
-            (state.prediction.active ? (
+            (state.mode === "imageguess" ? (
+              <ImageGuessScreen state={state} />
+            ) : state.prediction.active ? (
               <PredictionScreen state={state} />
             ) : (
               <RoomScreen state={state} />
@@ -898,6 +906,144 @@ function PredictionScreen({ state }: { state: PublicState }) {
           {p.resolved ? "✓ إنهاء" : "✕ إلغاء"}
         </button>
       </div>
+    </div>
+  );
+}
+
+// ---------------- Image guess (تخمين الصورة) ----------------
+function ImageGuessScreen({ state }: { state: PublicState }) {
+  const ig = state.imageGuess;
+  const open = state.roomOpen;
+  const [url, setUrl] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [answers, setAnswers] = useState("");
+
+  const startRound = () => {
+    if (!url.trim() || !answers.trim()) return;
+    send("openImageGuess", { imageUrl: url.trim(), prompt: prompt.trim(), answers: answers.trim() });
+  };
+
+  return (
+    <div className="w-full max-w-2xl space-y-5 text-center">
+      <div className="text-5xl">🖼️</div>
+      <h2 className="text-2xl font-extrabold text-sky-300">تخمين الصورة</h2>
+
+      {/* room bar */}
+      <div className="rounded-xl bg-slate-800/60 border border-slate-700 p-3 flex items-center justify-center gap-3 flex-wrap text-sm">
+        {open ? (
+          <span className="text-emerald-300 font-bold">
+            🟢 الغرفة مفتوحة — اكتبوا «{state.settings.joinKeyword}» للدخول
+          </span>
+        ) : (
+          <span className="text-slate-400">الغرفة مغلقة</span>
+        )}
+        <span className="text-slate-400">· {state.playerCount} لاعب</span>
+        <button
+          onClick={() => send(open ? "closeRoom" : "openRoom")}
+          className={`rounded-lg px-3 py-1.5 font-bold ${open ? "bg-amber-600 hover:bg-amber-500" : "btn-gold"}`}
+        >
+          {open ? "🔒 إغلاق" : "🔓 فتح الغرفة"}
+        </button>
+      </div>
+
+      {!ig.active ? (
+        /* setup form */
+        <div className="rounded-2xl bg-slate-800/60 border border-slate-700 p-5 space-y-3 text-right">
+          <div>
+            <label className="block mb-1 text-slate-400 text-sm">رابط الصورة (URL)</label>
+            <input
+              dir="ltr"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com/image.png"
+              className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-left outline-none focus:border-sky-500"
+            />
+          </div>
+          {url.trim() && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={url} alt="معاينة" className="max-h-40 mx-auto rounded-lg object-contain" />
+          )}
+          <div>
+            <label className="block mb-1 text-slate-400 text-sm">سؤال/تلميح (اختياري)</label>
+            <input
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="مثال: خمّن اللاعب من شعارات أنديته"
+              className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-right outline-none focus:border-sky-500"
+            />
+          </div>
+          <div>
+            <label className="block mb-1 text-slate-400 text-sm">الإجابات المقبولة (افصل بفاصلة ,)</label>
+            <input
+              value={answers}
+              onChange={(e) => setAnswers(e.target.value)}
+              placeholder="ميسي, ليونيل ميسي, messi"
+              className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-right outline-none focus:border-sky-500"
+            />
+          </div>
+          <button
+            onClick={startRound}
+            disabled={state.playerCount === 0 || !url.trim() || !answers.trim()}
+            className="w-full rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-40 disabled:cursor-not-allowed font-bold py-3"
+          >
+            ▶ افتح جولة التخمين
+          </button>
+          {state.playerCount === 0 && (
+            <p className="text-xs text-slate-500 text-center">يجب أن يدخل لاعب واحد على الأقل.</p>
+          )}
+        </div>
+      ) : (
+        /* active round */
+        <div className="rounded-2xl bg-slate-800/60 border border-sky-500/40 p-5 space-y-3">
+          {ig.prompt && <p className="text-lg font-bold text-white">{ig.prompt}</p>}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={ig.imageUrl} alt="الصورة" className="max-h-72 mx-auto rounded-xl object-contain" />
+
+          {ig.open ? (
+            <div className="inline-flex items-center gap-2 text-sky-300 text-sm font-bold">
+              <span className="w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse" />
+              اكتبوا تخمينكم في الدردشة · {ig.guessCount} تخمين
+            </div>
+          ) : ig.winner ? (
+            <p className="text-emerald-300 font-extrabold text-lg">
+              🎉 {ig.winner} خمّنها صحيحًا! · الجواب: {ig.answer}
+            </p>
+          ) : (
+            <p className="text-amber-300 font-bold">الجواب: {ig.answer}</p>
+          )}
+
+          {/* recent guesses */}
+          {ig.recentGuesses.length > 0 && (
+            <ul className="flex flex-wrap gap-1.5 justify-center max-h-28 overflow-y-auto">
+              {ig.recentGuesses.map((g, i) => (
+                <li
+                  key={i}
+                  className={`rounded-full px-2.5 py-1 text-xs ${g.correct ? "bg-emerald-600/40 text-emerald-200 font-bold" : "bg-slate-900/60 text-slate-400"}`}
+                >
+                  {g.username}: {g.text}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex gap-2 justify-center flex-wrap pt-1">
+            {ig.open && (
+              <button
+                onClick={() => send("revealImageGuess")}
+                className="rounded-xl bg-amber-600 hover:bg-amber-500 font-bold py-2.5 px-5"
+              >
+                🏳 كشف الجواب
+              </button>
+            )}
+            <button
+              onClick={() => send("cancelImageGuess")}
+              className="rounded-xl bg-sky-600 hover:bg-sky-500 font-bold py-2.5 px-5"
+            >
+              🖼️ صورة جديدة
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

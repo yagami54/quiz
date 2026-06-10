@@ -41,6 +41,17 @@ interface PredictionState {
   entries: Map<string, PredictionRec>; // key: lowercase username
 }
 
+interface ImageGuessState {
+  active: boolean;
+  open: boolean;
+  imageUrl: string;
+  prompt: string;
+  answers: string[]; // acceptable answers (normalized matching)
+  resolved: boolean;
+  winner: string | null;
+  guesses: { username: string; text: string; correct: boolean; at: number }[];
+}
+
 interface GameState {
   // connection
   kick: KickChat | null;
@@ -52,6 +63,8 @@ interface GameState {
   roomOpen: boolean;
   // pubg match prediction
   prediction: PredictionState;
+  // image guess
+  imageGuess: ImageGuessState;
   // round
   phase: Phase;
   round: number;
@@ -89,6 +102,16 @@ function createState(): GameState {
       resolved: false,
       actual: null,
       entries: new Map(),
+    },
+    imageGuess: {
+      active: false,
+      open: false,
+      imageUrl: "",
+      prompt: "",
+      answers: [],
+      resolved: false,
+      winner: null,
+      guesses: [],
     },
     phase: "lobby",
     round: 0,
@@ -204,6 +227,56 @@ function registerPrediction(username: string, content: string) {
   state.prediction.entries.set(key, { value, points: null });
 }
 
+// ---------- image guess ----------
+// تطبيع نص للمطابقة (يزيل التشكيل ويوحّد الحروف العربية وعلامات الترقيم)
+function normalizeText(s: string): string {
+  return s
+    .replace(/[ً-ٰٟـ]/g, "") // تشكيل + تطويل
+    .replace(/[إأآٱ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
+    .replace(/ة/g, "ه")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+function guessMatches(guess: string, answers: string[]): boolean {
+  const g = normalizeText(guess);
+  if (g.length < 2) return false;
+  for (const a of answers) {
+    const na = normalizeText(a);
+    if (!na) continue;
+    if (g === na) return true; // مطابقة تامة
+    if (na.length >= 3 && g.includes(na)) return true; // كتب الجواب وزيادة
+    if (g.length >= 4 && na.includes(g)) return true; // كتب جزءًا مميّزًا من الجواب
+  }
+  return false;
+}
+
+function registerImageGuess(username: string, content: string) {
+  const ig = state.imageGuess;
+  const key = username.toLowerCase();
+  if (!state.players.has(key)) return; // only room players can guess
+  const text = content.trim().slice(0, 60);
+  if (!text) return;
+  const correct = guessMatches(text, ig.answers);
+  ig.guesses.push({ username, text, correct, at: Date.now() });
+  if (ig.guesses.length > 50) ig.guesses.shift();
+
+  if (correct && !ig.winner) {
+    ig.winner = username;
+    ig.open = false;
+    ig.resolved = true;
+    const p = state.players.get(key)!;
+    p.points += 1;
+    state.lastWinner = { username, points: p.points, at: Date.now() };
+    void addPointsToHistory(state.kick?.slug ?? "", username, username, 1);
+    addLog(`اللاعب ${username} خمّن الصورة صحيحًا! نقاطه الآن: ${p.points}`);
+  }
+}
+
 // ---------- chat handling ----------
 function handleChat(username: string, content: string, color?: string) {
   state.chat.push({ username, content, color, at: Date.now() });
@@ -220,6 +293,11 @@ function handleChat(username: string, content: string, color?: string) {
   // pubg prediction: collect guesses from chat while open
   if (state.prediction.active && state.prediction.open) {
     registerPrediction(username, content);
+  }
+
+  // image guess: match free-text guesses from chat while open
+  if (state.imageGuess.active && state.imageGuess.open) {
+    registerImageGuess(username, content);
   }
 
   if (state.phase === "question" && !state.paused) {
@@ -374,7 +452,7 @@ export function setTopic(topic: Topic) {
 
 export function setMode(mode: GameMode) {
   state.mode = mode;
-  if (mode === "prediction") state.topic = null;
+  if (mode === "prediction" || mode === "imageguess") state.topic = null;
   notify();
 }
 
@@ -475,6 +553,44 @@ export function cancelPrediction() {
   notify();
 }
 
+// ---------- image guess actions ----------
+export function openImageGuess(imageUrl: string, prompt: string, answers: string[]) {
+  state.imageGuess = {
+    active: true,
+    open: true,
+    imageUrl: imageUrl.trim(),
+    prompt: prompt.trim(),
+    answers: answers.map((a) => a.trim()).filter(Boolean),
+    resolved: false,
+    winner: null,
+    guesses: [],
+  };
+  addLog("فُتحت جولة تخمين الصورة — اكتبوا تخمينكم في الدردشة");
+  notify();
+}
+
+export function revealImageGuess() {
+  if (!state.imageGuess.active) return;
+  state.imageGuess.open = false;
+  state.imageGuess.resolved = true;
+  addLog(`الجواب: ${state.imageGuess.answers[0] ?? "—"}`);
+  notify();
+}
+
+export function cancelImageGuess() {
+  state.imageGuess = {
+    active: false,
+    open: false,
+    imageUrl: "",
+    prompt: "",
+    answers: [],
+    resolved: false,
+    winner: null,
+    guesses: [],
+  };
+  notify();
+}
+
 export function startRound() {
   if (!state.topic) return;
   state.roomOpen = false; // lock the room when the round starts
@@ -536,6 +652,7 @@ export function clearPlayers() {
 export function backToTopics() {
   stopGame();
   cancelPrediction();
+  cancelImageGuess();
   state.mode = "trivia";
   state.topic = null;
   notify();
@@ -578,6 +695,8 @@ export function getPublicState(): PublicState {
     topicLabel:
       state.mode === "prediction"
         ? "توقّعات الماتش (PUBG)"
+        : state.mode === "imageguess"
+        ? "تخمين الصورة"
         : state.topic
         ? TOPIC_LABELS[state.topic]
         : "",
@@ -622,6 +741,22 @@ export function getPublicState(): PublicState {
             a.username.localeCompare(b.username)
         )
         .slice(0, 100),
+    },
+    imageGuess: {
+      active: state.imageGuess.active,
+      open: state.imageGuess.open,
+      imageUrl: state.imageGuess.imageUrl,
+      prompt: state.imageGuess.prompt,
+      resolved: state.imageGuess.resolved,
+      // الجواب لا يُكشف إلا بعد الحلّ (حتى لا يتسرّب)
+      answer: state.imageGuess.resolved ? state.imageGuess.answers[0] ?? "" : "",
+      winner: state.imageGuess.winner,
+      guessCount: state.imageGuess.guesses.length,
+      recentGuesses: state.imageGuess.guesses.slice(-12).map((g) => ({
+        username: g.username,
+        text: g.text,
+        correct: g.correct,
+      })),
     },
     players,
     playerCount: state.players.size,

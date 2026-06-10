@@ -17,6 +17,10 @@ create table if not exists public.leaderboard (
 create index if not exists leaderboard_channel_points_idx
   on public.leaderboard (channel, total_points desc);
 
+-- تفعيل RLS بلا policies: يمنع المفتاح العام تمامًا،
+-- والمفتاح السرّي (الخادم) يتجاوز RLS فيشتغل عادي.
+alter table public.leaderboard enable row level security;
+
 -- دالة إضافة نقاط بشكل ذرّي (atomic increment + upsert)
 create or replace function public.add_points(
   p_channel  text,
