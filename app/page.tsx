@@ -911,18 +911,30 @@ function PredictionScreen({ state }: { state: PublicState }) {
 }
 
 // ---------------- Image guess (تخمين الصورة) ----------------
-function CrestPitch({ crests }: { crests: string[] }) {
+// يقسّم الشعارات إلى صفوف تشكيلة (11 = 3-3-4-1)
+function formationRows(n: number): number[] {
+  if (n === 11) return [3, 3, 4, 1];
+  if (n <= 4) return [n];
+  if (n <= 6) return [3, n - 3];
+  return [3, 3, n - 6];
+}
+
+function CrestPitch({ crests, size = "w-12 h-12" }: { crests: string[]; size?: string }) {
+  const rows = formationRows(crests.length);
+  let idx = 0;
+  const groups = rows.map((cnt) => crests.slice(idx, (idx += cnt)));
   return (
     <div
-      className="rounded-2xl border border-green-600/40 p-5 grid grid-cols-3 gap-4 place-items-center"
-      style={{
-        background:
-          "repeating-linear-gradient(0deg, #166534 0 38px, #15803d 38px 76px)",
-      }}
+      className="rounded-2xl border border-green-600/40 p-4 space-y-3"
+      style={{ background: "repeating-linear-gradient(0deg, #14532d 0 34px, #166534 34px 68px)" }}
     >
-      {crests.map((c, i) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img key={i} src={c} alt="" className="w-16 h-16 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]" />
+      {groups.map((g, ri) => (
+        <div key={ri} className="flex justify-center gap-4 flex-wrap">
+          {g.map((c, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={i} src={c} alt="" className={`${size} object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`} />
+          ))}
+        </div>
       ))}
     </div>
   );

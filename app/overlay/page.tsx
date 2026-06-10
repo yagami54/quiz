@@ -238,6 +238,34 @@ function PredictionWidget({ state }: { state: PublicState }) {
   );
 }
 
+function formationRows(n: number): number[] {
+  if (n === 11) return [3, 3, 4, 1];
+  if (n <= 4) return [n];
+  if (n <= 6) return [3, n - 3];
+  return [3, 3, n - 6];
+}
+
+function CrestFormation({ crests }: { crests: string[] }) {
+  const rows = formationRows(crests.length);
+  let idx = 0;
+  const groups = rows.map((cnt) => crests.slice(idx, (idx += cnt)));
+  return (
+    <div
+      className="rounded-2xl border border-green-600/40 p-5 space-y-4"
+      style={{ background: "repeating-linear-gradient(0deg, #14532d 0 52px, #166534 52px 104px)" }}
+    >
+      {groups.map((g, ri) => (
+        <div key={ri} className="flex justify-center gap-6 flex-wrap">
+          {g.map((c, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={i} src={c} alt="" className="w-[4.5rem] h-[4.5rem] object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.7)]" />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ImageGuessWidget({ state }: { state: PublicState }) {
   const ig = state.imageGuess;
   return (
@@ -250,15 +278,7 @@ function ImageGuessWidget({ state }: { state: PublicState }) {
       </div>
       {ig.prompt && <p className="text-2xl font-bold text-white">{ig.prompt}</p>}
       {ig.crests.length > 0 ? (
-        <div
-          className="rounded-2xl border border-green-600/40 p-6 grid grid-cols-3 gap-6 place-items-center"
-          style={{ background: "repeating-linear-gradient(0deg, #166534 0 48px, #15803d 48px 96px)" }}
-        >
-          {ig.crests.map((c, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={i} src={c} alt="" className="w-24 h-24 object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.6)]" />
-          ))}
-        </div>
+        <CrestFormation crests={ig.crests} />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={ig.imageUrl} alt="" className="max-h-[55vh] mx-auto rounded-2xl object-contain" />
