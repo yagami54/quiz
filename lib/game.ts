@@ -1,6 +1,7 @@
 import { KickChat } from "./kick";
 import { QUESTIONS } from "./questions";
 import { NATIONAL_TEAMS } from "./nationalteams";
+import { pickTextDistractors } from "./distractors";
 import { addPointsToHistory } from "./supabase";
 import {
   CATEGORY_LABELS,
@@ -389,22 +390,26 @@ function numericDistractors(correct: string, existing: string[], count: number):
 }
 
 /**
- * يخلط خيارات السؤال (لتوزيع موضع الجواب الصحيح). للأسئلة **الرقمية فقط** يزيد
- * خيارات رقمية مولّدة قريبة من الجواب بنفس الوحدة (حتى 6). الأسئلة **النصّية**
- * تبقى بخياراتها الأصلية المكتوبة يدويًا (منطقية 100% — بلا استعارة عشوائية).
+ * يبني سؤالًا بـ6 خيارات بخيارات إضافية **مفهومة السياق**:
+ * - رقمي → أرقام مولّدة قريبة من الجواب بنفس الوحدة.
+ * - نصّي → مجمعات دلالية (دول/عواصم/لاعبين/أنبياء/سور...) حسب نوع جواب السؤال.
+ * إن لم يتأكّد النظام من النوع، يبقى السؤال بخياراته الأصلية الـ4 (بلا خيارات غريبة).
  */
 function buildQuestion(q: Question): Question {
   const seen = new Set(q.options.map(norm));
   const items = q.options.map((text, i) => ({ text, correct: i === q.correct }));
+  const need = OPTIONS_PER_QUESTION - items.length;
   const numericQ = q.options.filter(isNumericOpt).length >= q.options.length - 1;
 
-  if (numericQ) {
-    const need = OPTIONS_PER_QUESTION - items.length;
-    for (const g of numericDistractors(q.options[q.correct], q.options, need)) {
-      if (seen.has(norm(g))) continue;
-      seen.add(norm(g));
-      items.push({ text: g, correct: false });
-    }
+  const extras = numericQ
+    ? numericDistractors(q.options[q.correct], q.options, need)
+    : pickTextDistractors(q, need);
+
+  for (const g of extras) {
+    if (items.length >= OPTIONS_PER_QUESTION) break;
+    if (seen.has(norm(g))) continue;
+    seen.add(norm(g));
+    items.push({ text: g, correct: false });
   }
 
   shuffleInPlace(items);
