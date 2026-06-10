@@ -34,6 +34,8 @@ const OPTION_COLORS = [
   "bg-sky-500/90",
   "bg-amber-500/90",
   "bg-emerald-500/90",
+  "bg-violet-500/90",
+  "bg-fuchsia-500/90",
 ];
 
 export default function Page() {
@@ -399,7 +401,7 @@ function GameDashboard({ state, sse }: { state: PublicState; sse: boolean }) {
                 </p>
               ) : (
                 <p className="text-center text-slate-500 text-sm">
-                  ✍ يكتب المتابعون رقم الإجابة (1-4) في الدردشة
+                  ✍ يكتب المتابعون رقم الإجابة (1-6) في الدردشة
                 </p>
               )}
             </div>

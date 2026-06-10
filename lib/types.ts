@@ -30,8 +30,9 @@ export interface Question {
   id: number;
   category: Category;
   text: string;
-  options: [string, string, string, string];
-  /** index 0-3 of the correct option */
+  /** نص الخيارات (4 في المصدر، تُوسَّع إلى 6 وقت العرض) */
+  options: string[];
+  /** فهرس الإجابة الصحيحة */
   correct: number;
 }
 

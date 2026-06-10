@@ -9,6 +9,8 @@ const OPTION_COLORS = [
   "bg-sky-500",
   "bg-amber-500",
   "bg-emerald-500",
+  "bg-violet-500",
+  "bg-fuchsia-500",
 ];
 
 type Player = PublicState["players"][number];
@@ -169,7 +171,7 @@ function QuestionWidget({ state, secs }: { state: PublicState; secs: number }) {
       </div>
 
       <p className="text-center text-amber-200/80 font-bold">
-        ✍ اكتب رقم الإجابة (1-4) في الدردشة
+        ✍ اكتب رقم الإجابة (1-6) في الدردشة
       </p>
     </Card>
   );

@@ -165,7 +165,7 @@ function parseChoice(content: string): number | null {
     .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
     .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
     .trim();
-  if (/^[1-4]$/.test(s)) return Number(s) - 1;
+  if (/^[1-6]$/.test(s)) return Number(s) - 1;
   return null;
 }
 
@@ -264,30 +264,56 @@ function registerAnswer(username: string, choice: number) {
 }
 
 // ---------- round flow ----------
-// Shuffle the 4 options so the correct answer isn't always in the same slot.
-// Works on indices (safe even if two options share the same text).
-function shuffleOptions(q: Question): Question {
-  const idx = [0, 1, 2, 3];
-  for (let i = idx.length - 1; i > 0; i--) {
+const OPTIONS_PER_QUESTION = 6;
+
+function shuffleInPlace<T>(a: T[]): T[] {
+  for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [idx[i], idx[j]] = [idx[j], idx[i]];
+    [a[i], a[j]] = [a[j], a[i]];
   }
-  const options = idx.map((i) => q.options[i]) as [string, string, string, string];
-  return { ...q, options, correct: idx.indexOf(q.correct) };
+  return a;
+}
+
+const norm = (s: string) => s.trim().toLowerCase();
+
+/**
+ * يبني سؤالًا بـ6 خيارات: الـ4 الأصلية + خيارين خاطئين مستعارين من نفس الفئة،
+ * ثم يخلط الكل عشوائيًا (فالإجابة الصحيحة تتوزّع على المواضع الستة).
+ * يتعقّب الصحيحة عبر علم (آمن حتى لو تكرّر نص خيار).
+ */
+function buildQuestion(q: Question, distractorPool: string[]): Question {
+  const seen = new Set(q.options.map(norm));
+  const items = q.options.map((text, i) => ({ text, correct: i === q.correct }));
+
+  for (const cand of shuffleInPlace([...distractorPool])) {
+    if (items.length >= OPTIONS_PER_QUESTION) break;
+    const k = norm(cand);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    items.push({ text: cand, correct: false });
+  }
+
+  shuffleInPlace(items);
+  return {
+    ...q,
+    options: items.map((it) => it.text),
+    correct: items.findIndex((it) => it.correct),
+  };
 }
 
 function pickRoundQuestions(): Question[] {
   const pool = QUESTIONS.filter(
     (q) => state.topic === "mixed" || q.category === state.topic
   );
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
+  // مجمع خيارات خاطئة لكل فئة (من كل البنك) — خيارات إضافية ذات صلة بالموضوع
+  const byCategory: Record<string, string[]> = {};
+  for (const q of QUESTIONS) {
+    (byCategory[q.category] ||= []).push(...q.options);
   }
-  // shuffle options of each chosen question so the correct slot is random
+  shuffleInPlace(pool);
   return pool
     .slice(0, Math.min(state.settings.perRound, pool.length))
-    .map(shuffleOptions);
+    .map((q) => buildQuestion(q, byCategory[q.category] || []));
 }
 
 function startQuestion() {
