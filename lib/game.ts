@@ -1,5 +1,6 @@
 import { KickChat } from "./kick";
 import { QUESTIONS } from "./questions";
+import { NATIONAL_TEAMS } from "./nationalteams";
 import { addPointsToHistory } from "./supabase";
 import {
   CATEGORY_LABELS,
@@ -45,6 +46,7 @@ interface ImageGuessState {
   active: boolean;
   open: boolean;
   imageUrl: string;
+  crests: string[]; // club badges (national-team mode)
   prompt: string;
   answers: string[]; // acceptable answers (normalized matching)
   resolved: boolean;
@@ -107,6 +109,7 @@ function createState(): GameState {
       active: false,
       open: false,
       imageUrl: "",
+      crests: [],
       prompt: "",
       answers: [],
       resolved: false,
@@ -559,6 +562,7 @@ export function openImageGuess(imageUrl: string, prompt: string, answers: string
     active: true,
     open: true,
     imageUrl: imageUrl.trim(),
+    crests: [],
     prompt: prompt.trim(),
     answers: answers.map((a) => a.trim()).filter(Boolean),
     resolved: false,
@@ -566,6 +570,32 @@ export function openImageGuess(imageUrl: string, prompt: string, answers: string
     guesses: [],
   };
   addLog("فُتحت جولة تخمين الصورة — اكتبوا تخمينكم في الدردشة");
+  notify();
+}
+
+// خمّن المنتخب: يختار منتخبًا عشوائيًا ويعرض شعارات أنديته
+export function openNationalTeam() {
+  const teams = NATIONAL_TEAMS.filter((t) => t.clubs.length >= 4);
+  if (teams.length === 0) return;
+  const team = teams[Math.floor(Math.random() * teams.length)];
+  // اخلط الشعارات حتى لا يدلّ ترتيبها على شيء
+  const crests = team.clubs.map((c) => c.badge);
+  for (let i = crests.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [crests[i], crests[j]] = [crests[j], crests[i]];
+  }
+  state.imageGuess = {
+    active: true,
+    open: true,
+    imageUrl: "",
+    crests,
+    prompt: "خمّن المنتخب من خلال أندية لاعبيه",
+    answers: team.aliases,
+    resolved: false,
+    winner: null,
+    guesses: [],
+  };
+  addLog("فُتحت جولة خمّن المنتخب — اكتبوا اسم المنتخب في الدردشة");
   notify();
 }
 
@@ -582,6 +612,7 @@ export function cancelImageGuess() {
     active: false,
     open: false,
     imageUrl: "",
+    crests: [],
     prompt: "",
     answers: [],
     resolved: false,
@@ -746,6 +777,7 @@ export function getPublicState(): PublicState {
       active: state.imageGuess.active,
       open: state.imageGuess.open,
       imageUrl: state.imageGuess.imageUrl,
+      crests: [...state.imageGuess.crests],
       prompt: state.imageGuess.prompt,
       resolved: state.imageGuess.resolved,
       // الجواب لا يُكشف إلا بعد الحلّ (حتى لا يتسرّب)

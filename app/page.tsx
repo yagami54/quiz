@@ -911,6 +911,23 @@ function PredictionScreen({ state }: { state: PublicState }) {
 }
 
 // ---------------- Image guess (تخمين الصورة) ----------------
+function CrestPitch({ crests }: { crests: string[] }) {
+  return (
+    <div
+      className="rounded-2xl border border-green-600/40 p-5 grid grid-cols-3 gap-4 place-items-center"
+      style={{
+        background:
+          "repeating-linear-gradient(0deg, #166534 0 38px, #15803d 38px 76px)",
+      }}
+    >
+      {crests.map((c, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={i} src={c} alt="" className="w-16 h-16 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]" />
+      ))}
+    </div>
+  );
+}
+
 function ImageGuessScreen({ state }: { state: PublicState }) {
   const ig = state.imageGuess;
   const open = state.roomOpen;
@@ -947,7 +964,23 @@ function ImageGuessScreen({ state }: { state: PublicState }) {
       </div>
 
       {!ig.active ? (
-        /* setup form */
+        <div className="space-y-3">
+        {/* national-team puzzle (auto) */}
+        <button
+          onClick={() => send("nationalTeam")}
+          disabled={state.playerCount === 0}
+          className="w-full rounded-2xl bg-gradient-to-br from-green-600/20 to-emerald-600/20 border border-green-500/40 hover:border-green-400 disabled:opacity-40 disabled:cursor-not-allowed p-5 transition flex items-center justify-center gap-3"
+        >
+          <span className="text-4xl">⚽</span>
+          <span className="text-right">
+            <span className="block font-extrabold text-green-300 text-lg">🎲 خمّن المنتخب</span>
+            <span className="block text-[11px] text-slate-400">منتخب عشوائي — يخمّنون من شعارات أنديته</span>
+          </span>
+        </button>
+
+        <div className="text-center text-xs text-slate-500">— أو صورة يدوية —</div>
+
+        {/* setup form */}
         <div className="rounded-2xl bg-slate-800/60 border border-slate-700 p-5 space-y-3 text-right">
           <div>
             <label className="block mb-1 text-slate-400 text-sm">رابط الصورة (URL)</label>
@@ -992,12 +1025,17 @@ function ImageGuessScreen({ state }: { state: PublicState }) {
             <p className="text-xs text-slate-500 text-center">يجب أن يدخل لاعب واحد على الأقل.</p>
           )}
         </div>
+        </div>
       ) : (
         /* active round */
         <div className="rounded-2xl bg-slate-800/60 border border-sky-500/40 p-5 space-y-3">
           {ig.prompt && <p className="text-lg font-bold text-white">{ig.prompt}</p>}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={ig.imageUrl} alt="الصورة" className="max-h-72 mx-auto rounded-xl object-contain" />
+          {ig.crests.length > 0 ? (
+            <CrestPitch crests={ig.crests} />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={ig.imageUrl} alt="الصورة" className="max-h-72 mx-auto rounded-xl object-contain" />
+          )}
 
           {ig.open ? (
             <div className="inline-flex items-center gap-2 text-sky-300 text-sm font-bold">

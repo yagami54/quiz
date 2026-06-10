@@ -11,6 +11,7 @@ import {
   kickPlayer,
   nextQuestion,
   openImageGuess,
+  openNationalTeam,
   openPrediction,
   openRoom,
   resetScores,
@@ -79,6 +80,9 @@ export async function POST(request: Request) {
               .split(",")
               .map((s) => s.trim()),
       );
+      break;
+    case "nationalTeam":
+      openNationalTeam();
       break;
     case "revealImageGuess":
       revealImageGuess();

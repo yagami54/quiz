@@ -249,8 +249,20 @@ function ImageGuessWidget({ state }: { state: PublicState }) {
         </span>
       </div>
       {ig.prompt && <p className="text-2xl font-bold text-white">{ig.prompt}</p>}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={ig.imageUrl} alt="" className="max-h-[55vh] mx-auto rounded-2xl object-contain" />
+      {ig.crests.length > 0 ? (
+        <div
+          className="rounded-2xl border border-green-600/40 p-6 grid grid-cols-3 gap-6 place-items-center"
+          style={{ background: "repeating-linear-gradient(0deg, #166534 0 48px, #15803d 48px 96px)" }}
+        >
+          {ig.crests.map((c, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={i} src={c} alt="" className="w-24 h-24 object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.6)]" />
+          ))}
+        </div>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={ig.imageUrl} alt="" className="max-h-[55vh] mx-auto rounded-2xl object-contain" />
+      )}
       {ig.open ? (
         <p className="text-xl font-bold text-sky-300">✍ اكتب تخمينك في الدردشة</p>
       ) : ig.winner ? (

@@ -66,6 +66,7 @@ export interface PublicImageGuess {
   active: boolean;
   open: boolean; // accepting guesses from chat
   imageUrl: string;
+  crests: string[]; // club badge URLs (national-team mode); empty = single image
   prompt: string;
   resolved: boolean;
   answer: string; // shown only after reveal
